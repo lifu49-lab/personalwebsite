@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- This one page shows every project. The content comes from projects.js — you don't need to edit this file. -->
+  <title>Projects — Lilian Fu</title>
+  <meta name="description" content="A short film by Lilian Fu, UK-based freelance animator, director and designer.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="nav">
+    <a href="index.html" class="logo">lilianfu<span>.</span></a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="index.html#animation">Animation</a>
+      <a href="index.html#illustration">Illustration</a>
+      <a href="index.html#work">Projects</a>
+      <a href="index.html#about">About</a>
+      <a href="index.html#contact" class="btn btn-small">Say hi</a>
+    </nav>
+  </header>
+
+  <main class="project-page" id="project"></main>
+
+  <footer class="footer">
+    <span>© <span id="year"></span> Lilian Fu. All artwork is mine — please ask before using it.</span>
+    <a href="#top" onclick="scrollTo({top:0});return false">Back to top ↑</a>
+  </footer>
+
+  <div class="lightbox" id="lightbox" hidden>
+    <button class="lb-close" aria-label="Close">✕</button>
+    <button class="lb-prev" aria-label="Previous">←</button>
+    <figure></figure>
+    <button class="lb-next" aria-label="Next">→</button>
+  </div>
+
+  <script src="projects.js"></script>
+  <script>
+    const $ = (s, el = document) => el.querySelector(s);
+    const esc = (s = "") => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+    // Skill tags that link to a showreel on the home page (same list as in script.js)
+    const TAG_REELS = { "toon boom": "toon-boom", "toonboom": "toon-boom", "moho": "moho" };
+
+    const slug = new URLSearchParams(location.search).get("p");
+    const i = PROJECTS.findIndex(p => p.slug === slug);
+    const p = PROJECTS[i];
+    const main = $("#project");
+
+    function videoHTML(v, cover, title) {
+      if (v && v.id && v.type === "vimeo")
+        return `<iframe src="https://player.vimeo.com/video/${encodeURIComponent(v.id)}" title="${esc(title)}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>`;
+      if (v && v.id && v.type === "youtube") {
+        // YouTube won't play embeds on a page opened from your computer — show a button instead until the site is live.
+        if (location.protocol === "file:")
+          return `<img src="https://i.ytimg.com/vi/${encodeURIComponent(v.id)}/hqdefault.jpg" alt=""><a class="btn" href="https://www.youtube.com/watch?v=${encodeURIComponent(v.id)}" target="_blank" rel="noopener">Watch on YouTube ▶</a>`;
+        return `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(v.id)}?rel=0" title="${esc(title)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`;
+      }
+      return cover ? `<img src="${esc(cover)}" alt="${esc(title)}">` : "";
+    }
+
+    if (!p) {
+      main.innerHTML = `<a class="back-link" href="index.html#work">← All projects</a><h1>Project not found</h1><p>This project doesn't exist (yet!).</p>`;
+    } else {
+      document.title = `${p.title} — Lilian Fu`;
+      const meta = [p.year, p.role].filter(Boolean).join(" · ");
+      const about = (p.about || []).filter(Boolean);
+      const credits = (p.credits || []).filter(c => c && c[0]);
+      const stills = (p.stills || []).filter(Boolean);
+      // Previous / next only within the same kind (projects with projects, books with books)
+      const isBook = p.kind === "book";
+      const group = PROJECTS.filter(x => (x.kind === "book") === isBook);
+      const gi = group.indexOf(p);
+      const prev = group[(gi - 1 + group.length) % group.length];
+      const next = group[(gi + 1) % group.length];
+      const back = isBook ? `<a class="back-link" href="index.html#books-section">← All illustrated books</a>` : `<a class="back-link" href="index.html#work">← All projects</a>`;
+
+      main.innerHTML = `
+        ${back}
+        <h1>${esc(p.title)}</h1>
+        ${p.altTitle ? `<p class="alt-title">${esc(p.altTitle)}</p>` : ""}
+        ${meta ? `<p class="project-meta">${esc(meta)}</p>` : ""}
+        ${(p.awards || []).length ? `<div class="laurels">${p.awards.map(a => `<img src="${esc(a.src)}" alt="${esc(a.name)}" title="${esc(a.name)}">`).join("")}</div>` : ""}
+        ${p.feature && p.feature.url ? `
+        <div class="feature-card card">
+          <div>
+            ${p.feature.label ? `<p class="feature-label">${esc(p.feature.label)}</p>` : ""}
+            ${p.feature.text ? `<p class="feature-text">${esc(p.feature.text)}</p>` : ""}
+          </div>
+          <a class="btn" href="${esc(p.feature.url)}" target="_blank" rel="noopener">${esc(p.feature.button || "Watch")} ↗</a>
+        </div>` : ""}
+        ${videoHTML(p.video, p.heroImage || p.cover, p.title) ? `<div class="project-video card">${videoHTML(p.video, p.heroImage || p.cover, p.title)}</div>${p.videoCaption ? `<p class="video-caption">${esc(p.videoCaption)}</p>` : ""}` : ""}
+        ${about.length || credits.length || (p.tools || []).length ? `
+        <div class="project-body">
+          <div class="project-about">
+            ${p.aboutTitle && about.length ? `<h2 class="about-title">${esc(p.aboutTitle)}</h2>` : ""}
+            ${about.map((t, n) => `<p${n ? "" : ' class="big"'}>${esc(t)}</p>`).join("")}
+            ${p.quote && p.quote.text ? `<blockquote class="pull-quote"><p>“${esc(p.quote.text)}”</p>${p.quote.source ? `<cite>— ${esc(p.quote.source)}</cite>` : ""}</blockquote>` : ""}
+            ${(p.tools || []).length ? `<ul class="tags">${p.tools.map(t => { const k = TAG_REELS[t.trim().toLowerCase()]; return k ? `<li><a class="tag-link" href="index.html#reel=${k}" title="Watch the ${esc(t)} showreel">${esc(t)} ▶</a></li>` : `<li>${esc(t)}</li>`; }).join("")}</ul>` : ""}
+          </div>
+          ${credits.length ? `<aside class="credits card"><h2>${esc(p.creditsTitle || "Credits")}</h2><dl>${credits.map(c => `<dt>${esc(c[0])}</dt><dd>${esc(c[1] || "")}</dd>`).join("")}</dl></aside>` : ""}
+        </div>` : ""}
+        ${(p.series || []).length ? `
+        <h2 class="stills-title">${esc(p.seriesTitle || "Series")}</h2>
+        <div class="series">${p.series.map(se => `
+          <article class="series-card card">
+            ${se.label ? `<p class="feature-label">${esc(se.label)}</p>` : ""}
+            ${se.video && se.video.id ? `<div class="project-video series-video">${videoHTML(se.video, "", se.title)}</div>` : ""}
+            <h3>${esc(se.title)}</h3>
+            ${se.year ? `<p class="project-meta">${esc(se.year)}</p>` : ""}
+            ${se.text ? `<p>${esc(se.text)}</p>` : ""}
+            ${(se.episodes || []).length ? `<ol class="episodes">${se.episodes.map(e => `<li>${esc(e)}</li>`).join("")}</ol>` : ""}
+            ${(se.credits || []).length ? `<dl class="series-credits">${se.credits.map(c => `<dt>${esc(c[0])}</dt><dd>${esc(c[1])}</dd>`).join("")}</dl>` : ""}
+            ${se.url ? `<a class="btn btn-small" href="${esc(se.url)}" target="_blank" rel="noopener">${esc(se.button || "Watch")} ↗</a>` : ""}
+          </article>`).join("")}
+        </div>` : ""}
+        ${stills.length ? `
+        <h2 class="stills-title">${esc(p.stillsTitle || (p.kind === "book" ? "Pages & process" : "Stills"))}</h2>
+        <div class="masonry">${stills.map((s, n) => `<button class="art card" data-i="${n}" aria-label="Open still ${n + 1}"><img src="${esc(s)}" alt="${esc(p.title)} still ${n + 1}" loading="lazy"></button>`).join("")}</div>` : ""}
+        ${p.footnote ? `<p class="footnote">${esc(p.footnote)}</p>` : ""}
+        ${group.length > 1 ? `
+        <nav class="project-nav">
+          ${group.length > 2 ? `<a class="btn btn-ghost" href="project.html?p=${encodeURIComponent(prev.slug)}">← ${esc(prev.title)}</a>` : "<span></span>"}
+          <a class="btn" href="project.html?p=${encodeURIComponent(next.slug)}">${esc(next.title)} →</a>
+        </nav>` : ""}`;
+
+      /* Stills lightbox */
+      const lb = $("#lightbox"), fig = $("figure", lb);
+      let cur = 0;
+      const show = n => { cur = (n + stills.length) % stills.length; fig.innerHTML = `<img src="${esc(stills[cur])}" alt="">`; lb.hidden = false; document.body.style.overflow = "hidden"; };
+      const close = () => { lb.hidden = true; fig.innerHTML = ""; document.body.style.overflow = ""; };
+      $(".lb-prev").hidden = $(".lb-next").hidden = stills.length < 2;
+      main.addEventListener("click", e => { const a = e.target.closest(".art"); if (a) show(+a.dataset.i); });
+      $(".lb-close").onclick = close;
+      $(".lb-prev").onclick = () => show(cur - 1);
+      $(".lb-next").onclick = () => show(cur + 1);
+      lb.addEventListener("click", e => { if (e.target === lb) close(); });
+      document.addEventListener("keydown", e => {
+        if (lb.hidden) return;
+        if (e.key === "Escape") close();
+        if (e.key === "ArrowLeft" && stills.length > 1) show(cur - 1);
+        if (e.key === "ArrowRight" && stills.length > 1) show(cur + 1);
+      });
+    }
+
+    /* Mobile menu */
+    const toggle = $(".nav-toggle"), links = $(".nav-links");
+    toggle.onclick = () => { const o = links.classList.toggle("open"); toggle.setAttribute("aria-expanded", o); };
+    $("#year").textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
